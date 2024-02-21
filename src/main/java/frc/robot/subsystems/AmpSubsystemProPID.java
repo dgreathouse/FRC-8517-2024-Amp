@@ -12,15 +12,14 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
-import edu.wpi.first.math.controller.PIDController;
+
 import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.lib.k;
 
-public class AmpSubsystem extends SubsystemBase {
+public class AmpSubsystemProPID extends SubsystemBase {
   // Define and initialize the two spin motors
   TalonFX m_leftSpinMotor = new TalonFX(k.RIO_CAN_BUS_IDS.AMP_LEFT_SPIN_MOTOR);
   TalonFX m_rightSpinMotor = new TalonFX(k.RIO_CAN_BUS_IDS.AMP_RIGHT_SPIN_MOTOR);
@@ -30,8 +29,14 @@ public class AmpSubsystem extends SubsystemBase {
   // Create a rotate motor instance of the CANSparkMax
   CANSparkMax m_rotateMotor = new CANSparkMax(k.RIO_CAN_BUS_IDS.AMP_ROTATE_MOTOR, MotorType.kBrushless);
 
-  PIDController m_rotatePIDController = new PIDController(0, 0, 0);
-  SlewRateLimiter m_rotateRateLimiter = new SlewRateLimiter(3);
+  // These constraints are used to limit the max velocity and acceleration of the rotate motor
+  // The actual control of the motor is in Volts, so the PID needs to return volts. Therefore Velocity is in Volts*radians/sec
+  TrapezoidProfile.Constraints m_rotateConstraints = new TrapezoidProfile.Constraints(
+    k.AMP.ROTATE_MOTOR_MAX_SPEED_RAD_PER_SEC*k.AMP.ROTATE_MOTOR_VELOCITY_SCALE, 
+    k.AMP.ROTATE_MOTOR_MAX_SPEED_RAD_PER_SEC*k.AMP.ROTATE_MOTOR_VELOCITY_SCALE /10.0);
+  // This is a PID controller that uses the constraints to limit the velocity and acceleration
+  ProfiledPIDController m_rotateProPID = new ProfiledPIDController(0, 0, 0, m_rotateConstraints);
+  // A arm feedforward uses a Cos term to adjust for gravity.
   // ks is in Volts, kg in Volts, kv in volt seconds per radian, ka in  volt seconds² per radian.
   ArmFeedforward m_rotateArmFeedForward = new ArmFeedforward(0, 0, k.AMP.ROTATE_MOTOR_FF_KV, k.AMP.ROTATE_MOTOR_FF_KA);
   
@@ -51,13 +56,12 @@ public class AmpSubsystem extends SubsystemBase {
    */
   public void rotate(double _angle){
     // Calculate the ProfiledPID value based on the actual angle and desired angle
-    double pid = m_rotatePIDController.calculate(Math.toRadians(getActualAngle()), Math.toRadians(_angle));
+    double pid = m_rotateProPID.calculate(Math.toRadians(getActualAngle()), Math.toRadians(_angle));
+    // Calculate the Feedforward term based on the angle to adjust for gravity and the PID desired velocity
+    double ff = m_rotateArmFeedForward.calculate(Math.toRadians(getActualAngle()), m_rotateProPID.getSetpoint().velocity);
     
     // Clamp the PID value to limit its output until we have control of the device
     pid = MathUtil.clamp(pid, -1, 1);
-    pid = m_rotateRateLimiter.calculate(pid);
-    // Calculate the Feedforward term based on the angle to adjust for gravity. Let the PID control the velocity
-    double ff = m_rotateArmFeedForward.calculate(Math.toRadians(getActualAngle()), 0);
     // SmartDashboard way of suppling a voltage to the motor for calibration
     if(SmartDashboard.getBoolean("AMP Test Volt Enable", false)){
       double volts = SmartDashboard.getNumber("AMP_TestVolts", 0.0);
@@ -75,7 +79,7 @@ public class AmpSubsystem extends SubsystemBase {
     return m_rotateMotor.getEncoder().getPosition() / k.AMP.ROTATE_MOTOR_GEAR_RATIO * 360.0;
   }
   /** Creates a new AmpSubsystem. */
-  public AmpSubsystem() {
+  public AmpSubsystemProPID() {
     initialize();;
   }
   public void initialize(){
