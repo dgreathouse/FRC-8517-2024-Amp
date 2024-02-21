@@ -28,12 +28,12 @@ public class AmpSubsystem extends SubsystemBase {
 
   // Create a rotate motor instance of the CANSparkMax
   CANSparkMax m_rotateMotor = new CANSparkMax(k.RIO_CAN_BUS_IDS.AMP_ROTATE_MOTOR, MotorType.kBrushless);
+
   // These constraints are used to limit the max velocity and acceleration of the rotate motor
   // The actual control of the motor is in Volts, so the PID needs to return volts. Therefore Velocity is in Volts*radians/sec
-
   TrapezoidProfile.Constraints m_rotateConstraints = new TrapezoidProfile.Constraints(
-    k.AMP.ROTATE_MOTOR_MAX_SPEED_RAD_PER_SEC/k.AMP.ROTATE_MOTOR_VELOCITY_SCALE, 
-    k.AMP.ROTATE_MOTOR_MAX_SPEED_RAD_PER_SEC/k.AMP.ROTATE_MOTOR_VELOCITY_SCALE /10.0);
+    k.AMP.ROTATE_MOTOR_MAX_SPEED_RAD_PER_SEC*k.AMP.ROTATE_MOTOR_VELOCITY_SCALE, 
+    k.AMP.ROTATE_MOTOR_MAX_SPEED_RAD_PER_SEC*k.AMP.ROTATE_MOTOR_VELOCITY_SCALE /10.0);
   // This is a PID controller that uses the constraints to limit the velocity and acceleration
   ProfiledPIDController m_rotateProPID = new ProfiledPIDController(0, 0, 0, m_rotateConstraints);
   // A arm feedforward uses a Cos term to adjust for gravity.
@@ -69,7 +69,7 @@ public class AmpSubsystem extends SubsystemBase {
     }else {
       // If button is not pressed set the value to 0.
       m_rotateMotor.setVoltage(0);
-      // Actual control of motor with PID and Feedforware. Commented out until calibration done.
+      // Actual control of motor with PID and Feedforward. Commented out until calibration done.
       //m_rotateMotor.setVoltage(pid + ff);
     }
   

@@ -27,7 +27,7 @@ public final class k {
         public static final double ROTATE_MOTOR_MAX_SPEED_RPS = ROTATE_MOTOR_MAX_SPEED_RPM / 60.0;
         public static final double ROTATE_MOTOR_MAX_SPEED_DEG_PER_SEC = ROTATE_MOTOR_MAX_SPEED_RPS * 360;
         public static final double ROTATE_MOTOR_MAX_SPEED_RAD_PER_SEC = ROTATE_MOTOR_MAX_SPEED_DEG_PER_SEC * k.MATH.DEGREES_TO_RADIANS;
-        public static final double ROTATE_MOTOR_VELOCITY_SCALE = 1000.0;
+        public static final double ROTATE_MOTOR_VELOCITY_SCALE = .0001;
         public static final double ROTATE_MOTOR_FF_KV = k.ROBOT.MAX_BATTERY_VOLTAGE * 1.0 / ROTATE_MOTOR_MAX_SPEED_RAD_PER_SEC ;
         public static final double ROTATE_MOTOR_FF_KA = (ROTATE_MOTOR_FF_KV) * 10.0;
     }
